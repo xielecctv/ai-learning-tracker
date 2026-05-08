@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI 学习计划追踪器</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="app-header">
+    <div>
+      <p class="eyebrow">AI Learning Tracker</p>
+      <h1>AI 学习计划追踪器</h1>
+      <p class="subtitle">记录你的 Vibe coding 学习任务，跟踪状态、分类和截止日期。</p>
+    </div>
+  </header>
+
+  <main class="app-shell">
+    <section class="summary-grid" aria-label="任务概览">
+      <article class="summary-item">
+        <span class="summary-number" id="total-count">0</span>
+        <span class="summary-label">总任务</span>
+      </article>
+      <article class="summary-item">
+        <span class="summary-number" id="progress-count">0</span>
+        <span class="summary-label">进行中</span>
+      </article>
+      <article class="summary-item warning">
+        <span class="summary-number" id="today-count">0</span>
+        <span class="summary-label">今日到期</span>
+      </article>
+      <article class="summary-item danger">
+        <span class="summary-number" id="overdue-count">0</span>
+        <span class="summary-label">逾期未完成</span>
+      </article>
+    </section>
+
+    <section class="panel">
+      <div class="panel-heading">
+        <h2 id="form-title">添加学习任务</h2>
+        <p>标题、分类、状态和截止日期是管理任务的核心信息。</p>
+      </div>
+
+      <form id="task-form" class="task-form">
+        <div class="form-field full-width">
+          <label for="task-title">任务标题</label>
+          <input id="task-title" type="text" placeholder="例如：完成 GitHub Pages 部署练习" required>
+        </div>
+
+        <div class="form-field">
+          <label for="task-category">分类</label>
+          <select id="task-category" required>
+            <option value="Vibe coding">Vibe coding</option>
+            <option value="AI 工具">AI 工具</option>
+            <option value="产品思维">产品思维</option>
+            <option value="基础编程">基础编程</option>
+            <option value="软件发布">软件发布</option>
+            <option value="复盘">复盘</option>
+          </select>
+        </div>
+
+        <div class="form-field">
+          <label for="task-status">状态</label>
+          <select id="task-status" required>
+            <option value="未开始">未开始</option>
+            <option value="进行中">进行中</option>
+            <option value="已完成">已完成</option>
+            <option value="暂缓">暂缓</option>
+          </select>
+        </div>
+
+        <div class="form-field">
+          <label for="task-due-date">截止日期</label>
+          <input id="task-due-date" type="date" required>
+        </div>
+
+        <div class="form-field full-width">
+          <label for="task-note">备注</label>
+          <textarea id="task-note" rows="3" placeholder="写下学习材料、下一步行动或复盘想法"></textarea>
+        </div>
+
+        <div class="form-actions full-width">
+          <button type="submit" class="primary-button" id="submit-button">保存任务</button>
+          <button type="button" class="secondary-button hidden" id="cancel-edit-button">取消编辑</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="focus-grid" aria-label="重点提醒">
+      <div class="panel">
+        <div class="panel-heading">
+          <h2>今日到期任务</h2>
+          <p>截止日期是今天，并且尚未完成的任务。</p>
+        </div>
+        <div id="today-list" class="compact-list"></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-heading">
+          <h2>逾期未完成任务</h2>
+          <p>截止日期早于今天，并且状态不是“已完成”的任务。</p>
+        </div>
+        <div id="overdue-list" class="compact-list"></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-heading">
+        <h2>任务列表</h2>
+        <p>按状态和分类筛选你的学习任务。</p>
+      </div>
+
+      <div class="filters">
+        <div class="form-field">
+          <label for="status-filter">按状态筛选</label>
+          <select id="status-filter">
+            <option value="全部">全部状态</option>
+            <option value="未开始">未开始</option>
+            <option value="进行中">进行中</option>
+            <option value="已完成">已完成</option>
+            <option value="暂缓">暂缓</option>
+          </select>
+        </div>
+
+        <div class="form-field">
+          <label for="category-filter">按分类筛选</label>
+          <select id="category-filter">
+            <option value="全部">全部分类</option>
+            <option value="Vibe coding">Vibe coding</option>
+            <option value="AI 工具">AI 工具</option>
+            <option value="产品思维">产品思维</option>
+            <option value="基础编程">基础编程</option>
+            <option value="软件发布">软件发布</option>
+            <option value="复盘">复盘</option>
+          </select>
+        </div>
+
+        <button type="button" class="secondary-button filter-reset" id="reset-filter-button">重置筛选</button>
+      </div>
+
+      <div id="task-list" class="task-list"></div>
+      <p id="empty-message" class="empty-message hidden">还没有学习任务，先添加一个吧。</p>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
