@@ -1,4 +1,6 @@
 const STORAGE_KEY = "ai-learning-tracker-tasks";
+const CATEGORIES = ["Vibe coding", "AI 工具", "产品思维", "基础编程", "软件发布", "复盘"];
+const STATUSES = ["未开始", "进行中", "已完成", "暂缓"];
 
 const form = document.querySelector("#task-form");
 const formTitle = document.querySelector("#form-title");
@@ -10,8 +12,13 @@ const noteInput = document.querySelector("#task-note");
 const submitButton = document.querySelector("#submit-button");
 const cancelEditButton = document.querySelector("#cancel-edit-button");
 
+const exportButton = document.querySelector("#export-button");
+const importFileInput = document.querySelector("#import-file");
+
+const searchInput = document.querySelector("#search-input");
 const statusFilter = document.querySelector("#status-filter");
 const categoryFilter = document.querySelector("#category-filter");
+const sortSelect = document.querySelector("#sort-select");
 const resetFilterButton = document.querySelector("#reset-filter-button");
 
 const taskList = document.querySelector("#task-list");
@@ -20,9 +27,14 @@ const overdueList = document.querySelector("#overdue-list");
 const emptyMessage = document.querySelector("#empty-message");
 
 const totalCount = document.querySelector("#total-count");
+const notStartedCount = document.querySelector("#not-started-count");
 const progressCount = document.querySelector("#progress-count");
+const doneCount = document.querySelector("#done-count");
+const pausedCount = document.querySelector("#paused-count");
 const todayCount = document.querySelector("#today-count");
 const overdueCount = document.querySelector("#overdue-count");
+const completionRate = document.querySelector("#completion-rate");
+const completionBar = document.querySelector("#completion-bar");
 
 let tasks = loadTasks();
 let editingTaskId = null;
@@ -72,7 +84,10 @@ form.addEventListener("submit", function (event) {
     tasks.push(newTask);
   }
 
-  saveTasks();
+  if (!saveTasks()) {
+    return;
+  }
+
   resetForm();
   render();
 });
@@ -81,15 +96,23 @@ cancelEditButton.addEventListener("click", function () {
   resetForm();
 });
 
+exportButton.addEventListener("click", exportTasks);
+importFileInput.addEventListener("change", importTasks);
+
+searchInput.addEventListener("input", renderTaskList);
 statusFilter.addEventListener("change", renderTaskList);
 categoryFilter.addEventListener("change", renderTaskList);
+sortSelect.addEventListener("change", renderTaskList);
 
 resetFilterButton.addEventListener("click", function () {
+  searchInput.value = "";
   statusFilter.value = "全部";
   categoryFilter.value = "全部";
+  sortSelect.value = "due-asc";
   renderTaskList();
 });
 
+// 从浏览器 localStorage 读取任务，并处理异常数据。
 function loadTasks() {
   const savedTasks = localStorage.getItem(STORAGE_KEY);
 
@@ -98,15 +121,24 @@ function loadTasks() {
   }
 
   try {
-    return JSON.parse(savedTasks);
+    const parsedTasks = JSON.parse(savedTasks);
+    return Array.isArray(parsedTasks) ? parsedTasks : [];
   } catch (error) {
     console.error("读取任务失败：", error);
     return [];
   }
 }
 
+// 保存任务到 localStorage。
 function saveTasks() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+    return true;
+  } catch (error) {
+    console.error("保存任务失败：", error);
+    alert("保存失败，请检查浏览器是否允许使用 localStorage。");
+    return false;
+  }
 }
 
 function render() {
@@ -115,17 +147,25 @@ function render() {
   renderTaskList();
 }
 
+// 计算首页仪表盘数据。
 function renderSummary() {
   const todayTasks = getTodayTasks();
   const overdueTasks = getOverdueTasks();
-  const progressTasks = tasks.filter(function (task) {
-    return task.status === "进行中";
-  });
+  const notStartedTasks = getTasksByStatus("未开始");
+  const progressTasks = getTasksByStatus("进行中");
+  const doneTasks = getTasksByStatus("已完成");
+  const pausedTasks = getTasksByStatus("暂缓");
+  const rate = tasks.length === 0 ? 0 : Math.round((doneTasks.length / tasks.length) * 100);
 
   totalCount.textContent = tasks.length;
+  notStartedCount.textContent = notStartedTasks.length;
   progressCount.textContent = progressTasks.length;
+  doneCount.textContent = doneTasks.length;
+  pausedCount.textContent = pausedTasks.length;
   todayCount.textContent = todayTasks.length;
   overdueCount.textContent = overdueTasks.length;
+  completionRate.textContent = rate + "%";
+  completionBar.style.width = rate + "%";
 }
 
 function renderFocusLists() {
@@ -147,21 +187,49 @@ function renderCompactList(container, list, emptyText) {
 }
 
 function renderTaskList() {
-  const selectedStatus = statusFilter.value;
-  const selectedCategory = categoryFilter.value;
-
-  const filteredTasks = tasks.filter(function (task) {
-    const statusMatched = selectedStatus === "全部" || task.status === selectedStatus;
-    const categoryMatched = selectedCategory === "全部" || task.category === selectedCategory;
-    return statusMatched && categoryMatched;
-  });
+  const visibleTasks = getVisibleTasks();
 
   taskList.innerHTML = "";
-  emptyMessage.classList.toggle("hidden", filteredTasks.length > 0);
+  emptyMessage.classList.toggle("hidden", visibleTasks.length > 0);
 
-  filteredTasks.forEach(function (task) {
+  visibleTasks.forEach(function (task) {
     taskList.appendChild(createTaskCard(task, true));
   });
+}
+
+// 合并搜索、筛选和排序，返回当前应该显示的任务。
+function getVisibleTasks() {
+  const keyword = searchInput.value.trim().toLowerCase();
+  const selectedStatus = statusFilter.value;
+  const selectedCategory = categoryFilter.value;
+  const selectedSort = sortSelect.value;
+
+  const filteredTasks = tasks.filter(function (task) {
+    const title = String(task.title || "").toLowerCase();
+    const note = String(task.note || "").toLowerCase();
+    const keywordMatched = keyword === "" || title.includes(keyword) || note.includes(keyword);
+    const statusMatched = selectedStatus === "全部" || task.status === selectedStatus;
+    const categoryMatched = selectedCategory === "全部" || task.category === selectedCategory;
+
+    return keywordMatched && statusMatched && categoryMatched;
+  });
+
+  return sortTasks(filteredTasks, selectedSort);
+}
+
+// 排序时复制数组，避免改变原始 tasks 顺序。
+function sortTasks(taskArray, sortType) {
+  const copiedTasks = [...taskArray];
+
+  copiedTasks.sort(function (firstTask, secondTask) {
+    if (sortType === "due-desc") {
+      return secondTask.dueDate.localeCompare(firstTask.dueDate);
+    }
+
+    return firstTask.dueDate.localeCompare(secondTask.dueDate);
+  });
+
+  return copiedTasks;
 }
 
 function createTaskCard(task, showActions) {
@@ -258,7 +326,10 @@ function deleteTask(taskId) {
     resetForm();
   }
 
-  saveTasks();
+  if (!saveTasks()) {
+    return;
+  }
+
   render();
 }
 
@@ -268,6 +339,112 @@ function resetForm() {
   formTitle.textContent = "添加学习任务";
   submitButton.textContent = "保存任务";
   cancelEditButton.classList.add("hidden");
+}
+
+// 导出当前任务为 JSON 文件。
+function exportTasks() {
+  const jsonText = JSON.stringify(tasks, null, 2);
+  const backupFile = new Blob([jsonText], { type: "application/json" });
+  const downloadUrl = URL.createObjectURL(backupFile);
+  const downloadLink = document.createElement("a");
+
+  downloadLink.href = downloadUrl;
+  downloadLink.download = "ai-learning-tracker-backup.json";
+  downloadLink.click();
+
+  URL.revokeObjectURL(downloadUrl);
+}
+
+// 导入 JSON 文件，校验通过后覆盖当前任务。
+function importTasks(event) {
+  const file = event.target.files[0];
+
+  if (!file) {
+    return;
+  }
+
+  const reader = new FileReader();
+
+  reader.onload = function () {
+    try {
+      const importedData = JSON.parse(reader.result);
+      const checkedTasks = validateImportedTasks(importedData);
+      const shouldImport = confirm("导入会覆盖当前任务，是否继续？");
+
+      if (!shouldImport) {
+        importFileInput.value = "";
+        return;
+      }
+
+      tasks = checkedTasks;
+      if (!saveTasks()) {
+        return;
+      }
+
+      resetForm();
+      render();
+      alert("导入成功。");
+    } catch (error) {
+      alert("导入失败：" + error.message);
+    }
+
+    importFileInput.value = "";
+  };
+
+  reader.onerror = function () {
+    alert("导入失败：无法读取这个文件。");
+    importFileInput.value = "";
+  };
+
+  reader.readAsText(file);
+}
+
+// 检查导入文件是否是合法的任务数组。
+function validateImportedTasks(importedData) {
+  if (!Array.isArray(importedData)) {
+    throw new Error("JSON 内容必须是任务数组。");
+  }
+
+  return importedData.map(function (task, index) {
+    if (!task || typeof task !== "object") {
+      throw new Error(`第 ${index + 1} 条任务格式不正确。`);
+    }
+
+    if (typeof task.title !== "string" || task.title.trim() === "") {
+      throw new Error(`第 ${index + 1} 条任务缺少任务标题。`);
+    }
+
+    if (!CATEGORIES.includes(task.category)) {
+      throw new Error(`第 ${index + 1} 条任务分类不正确。`);
+    }
+
+    if (!STATUSES.includes(task.status)) {
+      throw new Error(`第 ${index + 1} 条任务状态不正确。`);
+    }
+
+    if (!isValidDateString(task.dueDate)) {
+      throw new Error(`第 ${index + 1} 条任务截止日期不正确。`);
+    }
+
+    const now = new Date().toISOString();
+
+    return {
+      id: typeof task.id === "string" && task.id.trim() !== "" ? task.id : "task-" + Date.now() + "-" + index,
+      title: task.title.trim(),
+      category: task.category,
+      status: task.status,
+      dueDate: task.dueDate,
+      note: typeof task.note === "string" ? task.note : "",
+      createdAt: typeof task.createdAt === "string" ? task.createdAt : now,
+      updatedAt: typeof task.updatedAt === "string" ? task.updatedAt : now
+    };
+  });
+}
+
+function getTasksByStatus(status) {
+  return tasks.filter(function (task) {
+    return task.status === status;
+  });
 }
 
 function getTodayTasks() {
@@ -312,6 +489,20 @@ function getDueClass(task) {
   }
 
   return "";
+}
+
+function isValidDateString(dateString) {
+  if (typeof dateString !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+    return false;
+  }
+
+  const parts = dateString.split("-");
+  const year = Number(parts[0]);
+  const month = Number(parts[1]);
+  const day = Number(parts[2]);
+  const date = new Date(year, month - 1, day);
+
+  return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
 }
 
 function formatDate(dateString) {
