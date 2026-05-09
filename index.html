@@ -104,6 +104,15 @@
         </div>
 
         <div class="form-field">
+          <label for="task-priority">优先级</label>
+          <select id="task-priority" required>
+            <option value="高">高</option>
+            <option value="中" selected>中</option>
+            <option value="低">低</option>
+          </select>
+        </div>
+
+        <div class="form-field">
           <label for="task-due-date">截止日期</label>
           <input id="task-due-date" type="date" required>
         </div>
@@ -111,6 +120,12 @@
         <div class="form-field full-width">
           <label for="task-note">备注</label>
           <textarea id="task-note" rows="3" placeholder="写下学习材料、下一步行动或复盘想法"></textarea>
+        </div>
+
+        <div class="form-field full-width">
+          <label for="task-review">完成复盘</label>
+          <textarea id="task-review" rows="3" placeholder="任务完成后，写下收获、卡点或下一步"></textarea>
+          <p class="field-hint" id="review-hint">将状态改为“已完成”后，可以填写完成复盘。</p>
         </div>
 
         <div class="form-actions full-width">
@@ -121,6 +136,14 @@
     </section>
 
     <section class="focus-grid" aria-label="重点提醒">
+      <div class="panel">
+        <div class="panel-heading">
+          <h2>本周任务</h2>
+          <p>截止日期在本周一到本周日之间的任务。</p>
+        </div>
+        <div id="week-list" class="compact-list"></div>
+      </div>
+
       <div class="panel">
         <div class="panel-heading">
           <h2>今日到期任务</h2>
@@ -145,6 +168,13 @@
       </div>
 
       <div class="filters">
+        <div class="quick-filters full-width" aria-label="快捷筛选">
+          <button type="button" class="quick-filter-button" data-quick-filter="today">今天</button>
+          <button type="button" class="quick-filter-button" data-quick-filter="week">本周</button>
+          <button type="button" class="quick-filter-button" data-quick-filter="overdue">逾期</button>
+          <button type="button" class="quick-filter-button" data-quick-filter="done">已完成</button>
+        </div>
+
         <div class="form-field">
           <label for="search-input">搜索任务</label>
           <input id="search-input" type="search" placeholder="搜索任务名称或备注">
@@ -190,6 +220,7 @@
     </section>
   </main>
 
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <script src="app.js"></script>
 </body>
 </html>
