@@ -16,14 +16,26 @@
   </header>
 
   <main class="app-shell">
-    <section class="summary-grid" aria-label="任务概览">
+    <section class="summary-grid" aria-label="学习进度仪表盘">
       <article class="summary-item">
         <span class="summary-number" id="total-count">0</span>
         <span class="summary-label">总任务</span>
       </article>
       <article class="summary-item">
+        <span class="summary-number" id="not-started-count">0</span>
+        <span class="summary-label">未开始</span>
+      </article>
+      <article class="summary-item">
         <span class="summary-number" id="progress-count">0</span>
         <span class="summary-label">进行中</span>
+      </article>
+      <article class="summary-item success">
+        <span class="summary-number" id="done-count">0</span>
+        <span class="summary-label">已完成</span>
+      </article>
+      <article class="summary-item">
+        <span class="summary-number" id="paused-count">0</span>
+        <span class="summary-label">暂缓</span>
       </article>
       <article class="summary-item warning">
         <span class="summary-number" id="today-count">0</span>
@@ -33,6 +45,28 @@
         <span class="summary-number" id="overdue-count">0</span>
         <span class="summary-label">逾期未完成</span>
       </article>
+      <article class="summary-item completion-card">
+        <span class="summary-number" id="completion-rate">0%</span>
+        <span class="summary-label">完成率</span>
+        <div class="progress-bar" aria-hidden="true">
+          <div class="progress-bar-fill" id="completion-bar"></div>
+        </div>
+      </article>
+    </section>
+
+    <section class="panel">
+      <div class="panel-heading">
+        <h2>数据备份</h2>
+        <p>导出当前任务作为备份，也可以从 JSON 文件导入并恢复任务。</p>
+      </div>
+
+      <div class="data-actions">
+        <button type="button" class="primary-button" id="export-button">导出数据</button>
+        <div class="form-field import-field">
+          <label for="import-file">导入数据</label>
+          <input id="import-file" type="file" accept=".json,application/json">
+        </div>
+      </div>
     </section>
 
     <section class="panel">
@@ -112,6 +146,11 @@
 
       <div class="filters">
         <div class="form-field">
+          <label for="search-input">搜索任务</label>
+          <input id="search-input" type="search" placeholder="搜索任务名称或备注">
+        </div>
+
+        <div class="form-field">
           <label for="status-filter">按状态筛选</label>
           <select id="status-filter">
             <option value="全部">全部状态</option>
@@ -132,6 +171,14 @@
             <option value="基础编程">基础编程</option>
             <option value="软件发布">软件发布</option>
             <option value="复盘">复盘</option>
+          </select>
+        </div>
+
+        <div class="form-field">
+          <label for="sort-select">按截止日期排序</label>
+          <select id="sort-select">
+            <option value="due-asc">截止日期从近到远</option>
+            <option value="due-desc">截止日期从远到近</option>
           </select>
         </div>
 
